@@ -1,0 +1,32 @@
+@import "tailwindcss";
+
+@layer base {
+  body {
+    font-family: "Plus Jakarta Sans", system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+    background-color: #FAF7F2;
+    color: #292524;
+    line-height: 1.6;
+    letter-spacing: -0.01em;
+  }
+
+  h1, h2, h3, .font-serif {
+    font-family: "Lora", Georgia, Cambria, "Times New Roman", Times, serif;
+  }
+
+  /* High contrast focus rings for motor and vision accessibility */
+  :focus-visible {
+    outline: 4px solid #D97706;
+    outline-offset: 2px;
+  }
+
+  /* Ensure smooth scrolling and prevent text jump */
+  html {
+    scroll-behavior: smooth;
+    -webkit-text-size-adjust: 100%;
+  }
+
+  /* Large legible touch target sizes */
+  button, a, input, textarea {
+    touch-action: manipulation;
+  }
+}
