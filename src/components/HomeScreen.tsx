@@ -1,23 +1,37 @@
 import React, { useState, useEffect } from "react";
-import { Screen, Reminder } from "../types";
+import { Screen, Reminder, UserProfile, AppLanguage } from "../types";
 import {
   MessageSquareHeart,
   FileText,
   CalendarCheck,
   LifeBuoy,
   Volume2,
+  VolumeX,
   Clock,
   Calendar,
   Sparkles,
-  CheckCircle2,
+  FolderHeart,
+  ShieldAlert,
+  ShieldCheck,
+  Ambulance,
+  Brain,
+  ArrowRight,
+  UserCheck,
+  Headphones,
 } from "lucide-react";
 import { speech } from "../utils/speech";
+import { UI_TRANSLATIONS } from "../utils/translations";
 
 interface HomeScreenProps {
   onNavigate: (screen: Screen) => void;
   reminders: Reminder[];
   onToggleReminder: (id: string) => void;
   isLargeText: boolean;
+  user?: UserProfile;
+  onOpenProfile?: () => void;
+  currentLanguage?: AppLanguage;
+  isAudioDescEnabled?: boolean;
+  onPlayAudioDesc?: () => void;
 }
 
 export const HomeScreen: React.FC<HomeScreenProps> = ({
@@ -25,11 +39,17 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
   reminders,
   onToggleReminder,
   isLargeText,
+  user,
+  onOpenProfile,
+  currentLanguage = "en",
+  isAudioDescEnabled = false,
+  onPlayAudioDesc,
 }) => {
+  const t = UI_TRANSLATIONS[currentLanguage] || UI_TRANSLATIONS.en;
   const [currentTime, setCurrentTime] = useState<Date>(new Date());
-  const [greeting, setGreeting] = useState<string>("Good morning, friend!");
+  const [greeting, setGreeting] = useState<string>("Good morning");
   const [suggestion, setSuggestion] = useState<string>(
-    "It is a lovely morning. Remember to enjoy a warm drink and check your morning medicine."
+    "It is a lovely day. Remember to enjoy a warm drink and check your morning medicine."
   );
   const [isLoadingGreeting, setIsLoadingGreeting] = useState<boolean>(false);
   const [isSpeakingGreeting, setIsSpeakingGreeting] = useState<boolean>(false);
@@ -42,34 +62,36 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
     return () => clearInterval(timer);
   }, []);
 
+  const friendlyName = user?.preferredName || user?.name || "friend";
+
   // Fetch proactive greeting based on time of day
   useEffect(() => {
     const hour = currentTime.getHours();
-    let defaultGreeting = "Good morning, friend!";
+    let baseGreeting = "Good morning";
     let defaultSuggestion =
       "Have you taken your morning medication and had a warm sip of tea or water?";
 
     if (hour >= 12 && hour < 17) {
-      defaultGreeting = "Good afternoon, friend!";
+      baseGreeting = "Good afternoon";
       defaultSuggestion =
         "Time for a gentle afternoon pause. A glass of fresh water and resting your eyes would be wonderful.";
     } else if (hour >= 17) {
-      defaultGreeting = "Good evening, friend!";
+      baseGreeting = "Good evening";
       defaultSuggestion =
         "As the day winds down, remember to check your evening medicine and relax your shoulders.";
     }
 
-    setGreeting(defaultGreeting);
+    setGreeting(`${baseGreeting}, ${friendlyName}!`);
     setSuggestion(defaultSuggestion);
 
-    // Fetch proactive AI greeting from server
+    // Proactive AI greeting
     async function fetchAiGreeting() {
       try {
         setIsLoadingGreeting(true);
         const res = await fetch("/api/companion/greeting", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ hour, userName: "friend" }),
+          body: JSON.stringify({ hour, userName: friendlyName }),
         });
         if (res.ok) {
           const data = await res.json();
@@ -77,31 +99,46 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
           if (data.suggestion) setSuggestion(data.suggestion);
         }
       } catch (err) {
-        console.warn("Could not load AI greeting, using default warm greeting:", err);
+        console.warn("Using default greeting:", err);
       } finally {
         setIsLoadingGreeting(false);
       }
     }
 
     fetchAiGreeting();
+  }, [friendlyName]);
+
+  // Keep greeting speaking state synced with global speech
+  useEffect(() => {
+    const unsubscribe = speech.subscribe((speaking) => {
+      if (!speaking) {
+        setIsSpeakingGreeting(false);
+      }
+    });
+    return () => unsubscribe();
   }, []);
 
   // Count uncompleted reminders
   const uncompletedCount = reminders.filter((r) => !r.completed).length;
-  const firstUncompleted = reminders.find((r) => !r.completed);
 
-  // Read aloud greeting and suggestion
+  // Read aloud greeting and suggestion with toggle support
   const handleSpeakGreeting = () => {
-    const fullText = `${greeting}. Here is your gentle suggestion for today: ${suggestion}`;
+    if (isSpeakingGreeting || speech.isSpeaking()) {
+      speech.stop();
+      setIsSpeakingGreeting(false);
+      return;
+    }
+
+    const fullText = `${greeting} Here is your thought for today: ${suggestion}`;
     setIsSpeakingGreeting(true);
     speech.speak(fullText, {
+      lang: currentLanguage,
       onStart: () => setIsSpeakingGreeting(true),
       onEnd: () => setIsSpeakingGreeting(false),
       onError: () => setIsSpeakingGreeting(false),
     });
   };
 
-  // Format date nicely: e.g. "Friday, September 19, 2026"
   const formattedDate = currentTime.toLocaleDateString("en-US", {
     weekday: "long",
     month: "long",
@@ -115,58 +152,67 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
   });
 
   return (
-    <div className="max-w-5xl mx-auto px-4 sm:px-6 py-6 sm:py-8 space-y-6 sm:space-y-8">
-      {/* 1. Welcoming Banner with Date & Time */}
+    <div className="max-w-5xl mx-auto px-4 sm:px-6 py-6 sm:py-8 space-y-6">
+      {/* 1. Welcoming Banner (Clean & Serene) */}
       <section
         id="welcome-banner"
-        className="bg-white rounded-3xl p-6 sm:p-8 border-2 border-[#E7E2D8] shadow-sm relative overflow-hidden"
+        className="bg-white rounded-3xl p-6 sm:p-8 border border-slate-200/90 shadow-xs relative overflow-hidden"
       >
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-[#F0EBE1] pb-6">
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-slate-100 pb-5">
           <div>
+            <div className="flex items-center gap-2 mb-1.5">
+              <span className="text-xl" role="img" aria-label="Hug">
+                🤗
+              </span>
+              <span className="text-xs font-semibold text-slate-500 uppercase tracking-wider">
+                Another Partner • Daily Companion
+              </span>
+            </div>
             <h1
-              className={`font-serif font-semibold text-[#1C1917] tracking-tight ${
-                isLargeText ? "text-3xl sm:text-5xl" : "text-2xl sm:text-4xl"
+              className={`font-serif font-bold text-slate-900 tracking-tight ${
+                isLargeText ? "text-3xl sm:text-4xl" : "text-2xl sm:text-3xl"
               }`}
             >
               {greeting}
             </h1>
             <p
-              className={`text-[#78716C] mt-2 font-medium ${
-                isLargeText ? "text-xl sm:text-2xl" : "text-lg sm:text-xl"
+              className={`text-slate-500 mt-1 font-normal ${
+                isLargeText ? "text-lg sm:text-xl" : "text-base"
               }`}
             >
-              Take your time today. We are here to help with everything.
+              Take your time today. Everything here is simple and stress-free.
             </p>
           </div>
 
-          {/* Big, Clear Clock & Date Box */}
-          <div className="bg-[#FAF7F2] border-2 border-[#E7E2D8] rounded-2xl p-4 sm:p-5 flex flex-col items-start md:items-end justify-center min-w-[220px]">
-            <div className="flex items-center gap-2 text-[#B45309] font-bold">
-              <Clock className="w-5 h-5 sm:w-6 sm:h-6" />
-              <span className="text-2xl sm:text-3xl font-extrabold tracking-tight">
+          {/* Clean Clock & Date Box */}
+          <div className="bg-slate-50 border border-slate-200/80 rounded-2xl px-5 py-3.5 flex items-center gap-4 shrink-0">
+            <div className="flex items-center gap-2 text-slate-900">
+              <Clock className="w-4 h-4 text-sky-600" />
+              <span className="text-xl font-bold tracking-tight">
                 {formattedTime}
               </span>
             </div>
-            <div className="flex items-center gap-1.5 text-[#57534E] font-semibold text-base sm:text-lg mt-1">
-              <Calendar className="w-4 h-4 text-[#78716C]" />
+            <div className="h-4 w-px bg-slate-200" />
+            <div className="flex items-center gap-1.5 text-slate-600 text-xs sm:text-sm font-medium">
+              <Calendar className="w-3.5 h-3.5 text-slate-400" />
               <span>{formattedDate}</span>
             </div>
           </div>
         </div>
 
-        {/* Proactive Suggestion Card */}
-        <div className="mt-6 bg-[#FEF3C7]/60 border-2 border-[#FDE68A] rounded-2xl p-4 sm:p-6 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-          <div className="flex items-start gap-3.5">
-            <div className="w-12 h-12 rounded-xl bg-[#D97706] text-white flex items-center justify-center shrink-0 mt-0.5 shadow-sm">
-              <Sparkles className="w-6 h-6" />
+        {/* Proactive Suggestion Pill */}
+        <div className="mt-5 bg-sky-50/60 border border-sky-100 rounded-2xl p-4 sm:p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <div className="flex items-start gap-3">
+            <div className="w-9 h-9 rounded-xl bg-sky-600 text-white flex items-center justify-center shrink-0 mt-0.5 shadow-2xs">
+              <Sparkles className="w-4 h-4" />
             </div>
             <div>
-              <span className="text-xs sm:text-sm font-bold uppercase tracking-wider text-[#92400E]">
-                Today's Friendly Thought
+              <span className="text-xs font-bold text-sky-800 uppercase tracking-wider block">
+                {t.dailyThought}
               </span>
               <p
-                className={`font-semibold text-[#78350F] leading-snug mt-1 ${
-                  isLargeText ? "text-xl sm:text-2xl" : "text-lg sm:text-xl"
+                className={`text-slate-800 font-medium leading-snug mt-0.5 ${
+                  isLargeText ? "text-lg sm:text-xl" : "text-sm sm:text-base"
                 }`}
               >
                 {isLoadingGreeting ? "Thinking of a warm thought for you..." : suggestion}
@@ -174,215 +220,394 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
             </div>
           </div>
 
-          <div className="flex items-center gap-3 w-full sm:w-auto shrink-0">
-            <button
-              onClick={handleSpeakGreeting}
-              id="listen-greeting-button"
-              className="flex-1 sm:flex-initial flex items-center justify-center gap-2 px-5 py-3.5 rounded-xl bg-[#B45309] hover:bg-[#92400E] text-white font-bold text-base sm:text-lg shadow-sm transition active:scale-95 focus:outline-hidden focus:ring-4 focus:ring-amber-400"
-            >
-              <Volume2
-                className={`w-6 h-6 ${isSpeakingGreeting ? "animate-bounce" : ""}`}
-              />
-              <span>{isSpeakingGreeting ? "Reading..." : "Read to Me"}</span>
-            </button>
-
-            {firstUncompleted && (
-              <button
-                onClick={() => onToggleReminder(firstUncompleted.id)}
-                id="quick-complete-reminder-button"
-                className="hidden lg:flex items-center gap-2 px-4 py-3.5 rounded-xl bg-white hover:bg-emerald-50 text-emerald-800 border-2 border-emerald-400 font-bold text-base transition shadow-xs"
-                title={`Mark '${firstUncompleted.title}' as done`}
-              >
-                <CheckCircle2 className="w-5 h-5 text-emerald-600" />
-                <span>Mark 1st Task Done</span>
-              </button>
+          <button
+            onClick={handleSpeakGreeting}
+            id="listen-greeting-button"
+            className={`self-start sm:self-center flex items-center gap-2 px-4 py-2.5 rounded-xl border font-bold text-xs sm:text-sm shadow-2xs transition active:scale-95 cursor-pointer shrink-0 ${
+              isSpeakingGreeting
+                ? "bg-rose-50 text-rose-800 border-rose-200 hover:bg-rose-100 ring-1 ring-rose-300"
+                : "bg-white hover:bg-sky-50 text-sky-800 border-sky-200"
+            }`}
+          >
+            {isSpeakingGreeting ? (
+              <VolumeX className="w-4 h-4 text-rose-600 animate-pulse" />
+            ) : (
+              <Volume2 className="w-4 h-4 text-sky-600" />
             )}
-          </div>
+            <span>{isSpeakingGreeting ? t.stopVoice : t.readToMe}</span>
+          </button>
         </div>
+
+        {/* Audio Description Banner (when enabled) */}
+        {isAudioDescEnabled && onPlayAudioDesc && (
+          <div className="mt-4 bg-sky-100/90 border-2 border-sky-300 rounded-2xl p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-2xs">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-xl bg-sky-600 text-white flex items-center justify-center shrink-0 shadow-2xs">
+                <Headphones className="w-5 h-5" />
+              </div>
+              <div>
+                <p className="font-bold text-sky-950 text-sm sm:text-base">
+                  {currentLanguage === "hi"
+                    ? "ऑडियो विवरण चालू है"
+                    : currentLanguage === "hinglish"
+                    ? "Audio Description Active Hai"
+                    : "Audio Description is Active"}
+                </p>
+                <p className="text-sky-800 text-xs sm:text-sm">
+                  {currentLanguage === "hi"
+                    ? "मुख्य स्क्रीन और उपलब्ध विकल्पों का ऑडियो सुनने के लिए टैप करें।"
+                    : currentLanguage === "hinglish"
+                    ? "Home screen aur saare main features ka audio sunne ke liye tap karein."
+                    : "Tap to listen to a clear spoken description of your screen and options."}
+                </p>
+              </div>
+            </div>
+            <button
+              onClick={onPlayAudioDesc}
+              id="home-play-audio-desc-btn"
+              className="self-start sm:self-center px-4 py-2.5 rounded-xl bg-sky-600 hover:bg-sky-700 active:bg-sky-800 text-white font-bold text-xs sm:text-sm shadow-2xs transition active:scale-95 cursor-pointer shrink-0 flex items-center gap-1.5"
+            >
+              <Volume2 className="w-4 h-4" />
+              <span>{t.readScreenDesc}</span>
+            </button>
+          </div>
+        )}
+
+        {/* Optional Profile Reminder Chip (Discrete & Clean) */}
+        {(!user?.preferredName && !user?.name) && onOpenProfile && (
+          <div className="mt-4 pt-3 border-t border-slate-100 flex items-center justify-between text-xs sm:text-sm text-slate-600">
+            <div className="flex items-center gap-2">
+              <UserCheck className="w-4 h-4 text-sky-600" />
+              <span>Would you like to tell us your name or emergency contact?</span>
+            </div>
+            <button
+              onClick={onOpenProfile}
+              className="text-sky-700 font-bold hover:underline cursor-pointer ml-2 shrink-0"
+            >
+              Add Profile Details (Optional) →
+            </button>
+          </div>
+        )}
       </section>
 
-      {/* 2. THE 4 BIG PRIMARY BUTTONS */}
+      {/* 2. THE PRIMARY SERVICES GRID (CLEAN, MINIMALIST & SPACIOUS) */}
       <section aria-label="Main Daily Tasks">
         <h2 className="sr-only">Main Daily Services</h2>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-5 sm:gap-6">
-          {/* BUTTON 1: TALK TO MY COMPANION */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-5">
+          {/* CARD 1: SCAM & FRAUD CHECKER */}
+          <button
+            onClick={() => {
+              speech.stop();
+              onNavigate("scam-checker");
+            }}
+            id="nav-scam-checker-button"
+            className="group text-left bg-white hover:bg-slate-50/70 border border-slate-200/90 hover:border-amber-300 rounded-3xl p-5 sm:p-6 shadow-xs hover:shadow-md transition duration-150 flex flex-col justify-between min-h-[210px] cursor-pointer"
+          >
+            <div>
+              <div className="flex items-center justify-between gap-2 mb-3">
+                <div className="w-12 h-12 rounded-2xl bg-amber-50 text-amber-700 flex items-center justify-center border border-amber-200/60">
+                  <ShieldCheck className="w-6 h-6" />
+                </div>
+                <span className="text-[11px] font-semibold uppercase tracking-wider text-amber-800 bg-amber-50 px-2 py-0.5 rounded-full border border-amber-200">
+                  Fraud Check
+                </span>
+              </div>
+
+              <h3
+                className={`font-bold text-slate-900 group-hover:text-amber-950 transition ${
+                  isLargeText ? "text-xl sm:text-2xl" : "text-lg"
+                }`}
+              >
+                {t.scamCardTitle}
+              </h3>
+              <p
+                className={`text-slate-500 font-normal mt-1 leading-relaxed ${
+                  isLargeText ? "text-base" : "text-xs sm:text-sm"
+                }`}
+              >
+                {t.scamCardDesc}
+              </p>
+            </div>
+
+            <div className="mt-4 pt-3 border-t border-slate-100 flex items-center justify-between text-amber-800 font-bold text-xs sm:text-sm">
+              <span>{t.checkMessage}</span>
+              <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition" />
+            </div>
+          </button>
+
+          {/* CARD 2: BRAIN & MEMORY GAMES */}
+          <button
+            onClick={() => {
+              speech.stop();
+              onNavigate("games");
+            }}
+            id="nav-brain-games-button"
+            className="group text-left bg-white hover:bg-slate-50/70 border border-slate-200/90 hover:border-emerald-300 rounded-3xl p-5 sm:p-6 shadow-xs hover:shadow-md transition duration-150 flex flex-col justify-between min-h-[210px] cursor-pointer"
+          >
+            <div>
+              <div className="flex items-center justify-between gap-2 mb-3">
+                <div className="w-12 h-12 rounded-2xl bg-emerald-50 text-emerald-700 flex items-center justify-center border border-emerald-200/60">
+                  <Brain className="w-6 h-6" />
+                </div>
+                <span className="text-[11px] font-semibold uppercase tracking-wider text-emerald-800 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200">
+                  Daily Play
+                </span>
+              </div>
+
+              <h3
+                className={`font-bold text-slate-900 group-hover:text-emerald-950 transition ${
+                  isLargeText ? "text-xl sm:text-2xl" : "text-lg"
+                }`}
+              >
+                {t.gamesCardTitle}
+              </h3>
+              <p
+                className={`text-slate-500 font-normal mt-1 leading-relaxed ${
+                  isLargeText ? "text-base" : "text-xs sm:text-sm"
+                }`}
+              >
+                {t.gamesCardDesc}
+              </p>
+            </div>
+
+            <div className="mt-4 pt-3 border-t border-slate-100 flex items-center justify-between text-emerald-800 font-bold text-xs sm:text-sm">
+              <span>{t.playGames}</span>
+              <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition" />
+            </div>
+          </button>
+
+          {/* CARD 3: TALK WITH COMPANION */}
           <button
             onClick={() => {
               speech.stop();
               onNavigate("companion");
             }}
             id="nav-talk-companion-button"
-            className="group text-left bg-white hover:bg-[#FFFBEB] active:bg-[#FEF3C7] border-3 border-[#E7E2D8] hover:border-[#D97706] rounded-3xl p-6 sm:p-8 shadow-sm hover:shadow-md transition duration-150 flex flex-col justify-between min-h-[220px] sm:min-h-[250px] focus:outline-hidden focus:ring-4 focus:ring-amber-400"
+            className="group text-left bg-white hover:bg-slate-50/70 border border-slate-200/90 hover:border-sky-300 rounded-3xl p-5 sm:p-6 shadow-xs hover:shadow-md transition duration-150 flex flex-col justify-between min-h-[210px] cursor-pointer"
           >
-            <div className="flex items-start justify-between gap-4">
-              <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-2xl bg-amber-100 group-hover:bg-amber-500 text-amber-900 group-hover:text-white flex items-center justify-center transition shadow-xs">
-                <MessageSquareHeart className="w-9 h-9 sm:w-11 sm:h-11" />
+            <div>
+              <div className="flex items-center justify-between gap-2 mb-3">
+                <div className="w-12 h-12 rounded-2xl bg-sky-50 text-sky-700 flex items-center justify-center border border-sky-200/60">
+                  <MessageSquareHeart className="w-6 h-6" />
+                </div>
+                <span className="text-[11px] font-semibold uppercase tracking-wider text-sky-800 bg-sky-50 px-2 py-0.5 rounded-full border border-sky-200">
+                  Voice & Chat
+                </span>
               </div>
-              <span className="px-3.5 py-1.5 rounded-full bg-amber-100 text-amber-900 font-bold text-sm sm:text-base">
-                Voice & Text
-              </span>
-            </div>
 
-            <div className="mt-4">
               <h3
-                className={`font-bold text-[#1C1917] group-hover:text-[#B45309] transition ${
-                  isLargeText ? "text-2xl sm:text-3xl" : "text-xl sm:text-2xl"
+                className={`font-bold text-slate-900 group-hover:text-sky-900 transition ${
+                  isLargeText ? "text-xl sm:text-2xl" : "text-lg"
                 }`}
               >
-                Talk to My Companion
+                {t.companionCardTitle}
               </h3>
               <p
-                className={`text-[#57534E] font-medium mt-1.5 leading-relaxed ${
-                  isLargeText ? "text-lg sm:text-xl" : "text-base sm:text-lg"
+                className={`text-slate-500 font-normal mt-1 leading-relaxed ${
+                  isLargeText ? "text-base" : "text-xs sm:text-sm"
                 }`}
               >
-                Ask any question in plain words, or enjoy a friendly, reassuring chat anytime.
+                {t.companionCardDesc}
               </p>
             </div>
 
-            <div className="mt-4 pt-3 border-t border-[#F0EBE1] flex items-center text-[#B45309] font-bold text-lg sm:text-xl">
-              <span>Press to Start Chatting →</span>
+            <div className="mt-4 pt-3 border-t border-slate-100 flex items-center justify-between text-sky-700 font-bold text-xs sm:text-sm">
+              <span>{t.openChat}</span>
+              <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition" />
             </div>
           </button>
 
-          {/* BUTTON 2: READ THIS FOR ME */}
-          <button
-            onClick={() => {
-              speech.stop();
-              onNavigate("simplify");
-            }}
-            id="nav-read-simplify-button"
-            className="group text-left bg-white hover:bg-[#F0FDF4] active:bg-[#DCFCE7] border-3 border-[#E7E2D8] hover:border-emerald-600 rounded-3xl p-6 sm:p-8 shadow-sm hover:shadow-md transition duration-150 flex flex-col justify-between min-h-[220px] sm:min-h-[250px] focus:outline-hidden focus:ring-4 focus:ring-emerald-400"
-          >
-            <div className="flex items-start justify-between gap-4">
-              <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-2xl bg-emerald-100 group-hover:bg-emerald-600 text-emerald-900 group-hover:text-white flex items-center justify-center transition shadow-xs">
-                <FileText className="w-9 h-9 sm:w-11 sm:h-11" />
-              </div>
-              <span className="px-3.5 py-1.5 rounded-full bg-emerald-100 text-emerald-900 font-bold text-sm sm:text-base">
-                Reads Out Loud
-              </span>
-            </div>
-
-            <div className="mt-4">
-              <h3
-                className={`font-bold text-[#1C1917] group-hover:text-emerald-800 transition ${
-                  isLargeText ? "text-2xl sm:text-3xl" : "text-xl sm:text-2xl"
-                }`}
-              >
-                Read This for Me
-              </h3>
-              <p
-                className={`text-[#57534E] font-medium mt-1.5 leading-relaxed ${
-                  isLargeText ? "text-lg sm:text-xl" : "text-base sm:text-lg"
-                }`}
-              >
-                Confusing letter, bill, or pill bottle? We simplify it into 3 clear points and read it out loud.
-              </p>
-            </div>
-
-            <div className="mt-4 pt-3 border-t border-[#F0EBE1] flex items-center text-emerald-800 font-bold text-lg sm:text-xl">
-              <span>Press to Read & Simplify →</span>
-            </div>
-          </button>
-
-          {/* BUTTON 3: DAILY REMINDERS */}
+          {/* CARD 4: DAILY REMINDERS */}
           <button
             onClick={() => {
               speech.stop();
               onNavigate("reminders");
             }}
             id="nav-daily-reminders-button"
-            className="group text-left bg-white hover:bg-[#EFF6FF] active:bg-[#DBEAFE] border-3 border-[#E7E2D8] hover:border-sky-600 rounded-3xl p-6 sm:p-8 shadow-sm hover:shadow-md transition duration-150 flex flex-col justify-between min-h-[220px] sm:min-h-[250px] focus:outline-hidden focus:ring-4 focus:ring-sky-400"
+            className="group text-left bg-white hover:bg-slate-50/70 border border-slate-200/90 hover:border-sky-300 rounded-3xl p-5 sm:p-6 shadow-xs hover:shadow-md transition duration-150 flex flex-col justify-between min-h-[210px] cursor-pointer"
           >
-            <div className="flex items-start justify-between gap-4">
-              <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-2xl bg-sky-100 group-hover:bg-sky-600 text-sky-900 group-hover:text-white flex items-center justify-center transition shadow-xs">
-                <CalendarCheck className="w-9 h-9 sm:w-11 sm:h-11" />
+            <div>
+              <div className="flex items-center justify-between gap-2 mb-3">
+                <div className="w-12 h-12 rounded-2xl bg-blue-50 text-blue-700 flex items-center justify-center border border-blue-200/60">
+                  <CalendarCheck className="w-6 h-6" />
+                </div>
+                <span
+                  className={`text-[11px] font-semibold uppercase tracking-wider px-2 py-0.5 rounded-full ${
+                    uncompletedCount > 0
+                      ? "bg-amber-50 text-amber-900 border border-amber-200"
+                      : "bg-emerald-50 text-emerald-900 border border-emerald-200"
+                  }`}
+                >
+                  {uncompletedCount > 0 ? `${uncompletedCount} to do` : "All Done ✓"}
+                </span>
               </div>
-              <span
-                className={`px-3.5 py-1.5 rounded-full font-bold text-sm sm:text-base ${
-                  uncompletedCount > 0
-                    ? "bg-amber-100 text-amber-900"
-                    : "bg-emerald-100 text-emerald-900"
-                }`}
-              >
-                {uncompletedCount > 0
-                  ? `${uncompletedCount} to do`
-                  : "All Done Today! ✓"}
-              </span>
-            </div>
 
-            <div className="mt-4">
               <h3
-                className={`font-bold text-[#1C1917] group-hover:text-sky-800 transition ${
-                  isLargeText ? "text-2xl sm:text-3xl" : "text-xl sm:text-2xl"
+                className={`font-bold text-slate-900 group-hover:text-blue-900 transition ${
+                  isLargeText ? "text-xl sm:text-2xl" : "text-lg"
                 }`}
               >
-                Daily Reminders
+                {t.remindersCardTitle}
               </h3>
               <p
-                className={`text-[#57534E] font-medium mt-1.5 leading-relaxed ${
-                  isLargeText ? "text-lg sm:text-xl" : "text-base sm:text-lg"
+                className={`text-slate-500 font-normal mt-1 leading-relaxed ${
+                  isLargeText ? "text-base" : "text-xs sm:text-sm"
                 }`}
               >
-                Your medicine, appointments, and water reminders. Big buttons, no confusing calendars.
+                {t.remindersCardDesc}
               </p>
             </div>
 
-            <div className="mt-4 pt-3 border-t border-[#F0EBE1] flex items-center text-sky-800 font-bold text-lg sm:text-xl">
-              <span>View Reminders →</span>
+            <div className="mt-4 pt-3 border-t border-slate-100 flex items-center justify-between text-blue-700 font-bold text-xs sm:text-sm">
+              <span>{t.viewReminders}</span>
+              <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition" />
             </div>
           </button>
 
-          {/* BUTTON 4: HELP WITH A TASK & FAMILY CONTACT */}
+          {/* CARD 5: READ & SIMPLIFY LETTERS */}
+          <button
+            onClick={() => {
+              speech.stop();
+              onNavigate("simplify");
+            }}
+            id="nav-read-simplify-button"
+            className="group text-left bg-white hover:bg-slate-50/70 border border-slate-200/90 hover:border-teal-300 rounded-3xl p-5 sm:p-6 shadow-xs hover:shadow-md transition duration-150 flex flex-col justify-between min-h-[210px] cursor-pointer"
+          >
+            <div>
+              <div className="flex items-center justify-between gap-2 mb-3">
+                <div className="w-12 h-12 rounded-2xl bg-teal-50 text-teal-700 flex items-center justify-center border border-teal-200/60">
+                  <FileText className="w-6 h-6" />
+                </div>
+                <span className="text-[11px] font-semibold uppercase tracking-wider text-teal-800 bg-teal-50 px-2 py-0.5 rounded-full border border-teal-200">
+                  Plain Words
+                </span>
+              </div>
+
+              <h3
+                className={`font-bold text-slate-900 group-hover:text-teal-900 transition ${
+                  isLargeText ? "text-xl sm:text-2xl" : "text-lg"
+                }`}
+              >
+                {t.simplifyCardTitle}
+              </h3>
+              <p
+                className={`text-slate-500 font-normal mt-1 leading-relaxed ${
+                  isLargeText ? "text-base" : "text-xs sm:text-sm"
+                }`}
+              >
+                {t.simplifyCardDesc}
+              </p>
+            </div>
+
+            <div className="mt-4 pt-3 border-t border-slate-100 flex items-center justify-between text-teal-700 font-bold text-xs sm:text-sm">
+              <span>{t.readSimplify}</span>
+              <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition" />
+            </div>
+          </button>
+
+          {/* CARD 6: IMPORTANT DOCUMENTS */}
+          <button
+            onClick={() => {
+              speech.stop();
+              onNavigate("documents");
+            }}
+            id="nav-important-documents-button"
+            className="group text-left bg-white hover:bg-slate-50/70 border border-slate-200/90 hover:border-sky-300 rounded-3xl p-5 sm:p-6 shadow-xs hover:shadow-md transition duration-150 flex flex-col justify-between min-h-[210px] cursor-pointer"
+          >
+            <div>
+              <div className="flex items-center justify-between gap-2 mb-3">
+                <div className="w-12 h-12 rounded-2xl bg-indigo-50 text-indigo-700 flex items-center justify-center border border-indigo-200/60">
+                  <FolderHeart className="w-6 h-6" />
+                </div>
+                <span className="text-[11px] font-semibold uppercase tracking-wider text-indigo-800 bg-indigo-50 px-2 py-0.5 rounded-full border border-indigo-200">
+                  Documents
+                </span>
+              </div>
+
+              <h3
+                className={`font-bold text-slate-900 group-hover:text-indigo-900 transition ${
+                  isLargeText ? "text-xl sm:text-2xl" : "text-lg"
+                }`}
+              >
+                {t.documentsCardTitle}
+              </h3>
+              <p
+                className={`text-slate-500 font-normal mt-1 leading-relaxed ${
+                  isLargeText ? "text-base" : "text-xs sm:text-sm"
+                }`}
+              >
+                {t.documentsCardDesc}
+              </p>
+            </div>
+
+            <div className="mt-4 pt-3 border-t border-slate-100 flex items-center justify-between text-indigo-700 font-bold text-xs sm:text-sm">
+              <span>{t.openDocuments}</span>
+              <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition" />
+            </div>
+          </button>
+        </div>
+
+        {/* DIGITAL LITERACY BANNER (CLEAN & MINIMALIST) */}
+        <div className="mt-5">
           <button
             onClick={() => {
               speech.stop();
               onNavigate("tasks");
             }}
-            id="nav-help-emergency-button"
-            className="group text-left bg-white hover:bg-[#FFF1F2] active:bg-[#FFE4E6] border-3 border-[#E7E2D8] hover:border-rose-500 rounded-3xl p-6 sm:p-8 shadow-sm hover:shadow-md transition duration-150 flex flex-col justify-between min-h-[220px] sm:min-h-[250px] focus:outline-hidden focus:ring-4 focus:ring-rose-400"
+            id="nav-help-tasks-button"
+            className="w-full text-left bg-white hover:bg-slate-50/80 border border-slate-200/90 hover:border-slate-300 rounded-3xl p-4 sm:p-5 transition flex flex-col sm:flex-row sm:items-center justify-between gap-3 cursor-pointer shadow-xs"
           >
-            <div className="flex items-start justify-between gap-4">
-              <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-2xl bg-rose-100 group-hover:bg-rose-600 text-rose-900 group-hover:text-white flex items-center justify-center transition shadow-xs">
-                <LifeBuoy className="w-9 h-9 sm:w-11 sm:h-11" />
+            <div className="flex items-center gap-3.5">
+              <div className="w-10 h-10 rounded-xl bg-slate-100 text-slate-700 flex items-center justify-center shrink-0">
+                <LifeBuoy className="w-5 h-5" />
               </div>
-              <span className="px-3.5 py-1.5 rounded-full bg-rose-100 text-rose-900 font-bold text-sm sm:text-base">
-                Call Family & Guides
-              </span>
+              <div>
+                <h3 className="font-bold text-sm sm:text-base text-slate-900">
+                  {t.guidesTitle}
+                </h3>
+                <p className="text-slate-500 text-xs sm:text-sm">
+                  {t.guidesDesc}
+                </p>
+              </div>
             </div>
-
-            <div className="mt-4">
-              <h3
-                className={`font-bold text-[#1C1917] group-hover:text-rose-800 transition ${
-                  isLargeText ? "text-2xl sm:text-3xl" : "text-xl sm:text-2xl"
-                }`}
-              >
-                Help with a Task & Family
-              </h3>
-              <p
-                className={`text-[#57534E] font-medium mt-1.5 leading-relaxed ${
-                  isLargeText ? "text-lg sm:text-xl" : "text-base sm:text-lg"
-                }`}
-              >
-                One-tap to call your daughter or son, plus easy step-by-step guides for video calls and phone tasks.
-              </p>
-            </div>
-
-            <div className="mt-4 pt-3 border-t border-[#F0EBE1] flex items-center text-rose-800 font-bold text-lg sm:text-xl">
-              <span>Open Help & Contacts →</span>
-            </div>
+            <span className="text-sky-700 font-bold text-xs sm:text-sm shrink-0 flex items-center gap-1">
+              <span>{t.viewGuides}</span>
+              <ArrowRight className="w-3.5 h-3.5" />
+            </span>
           </button>
         </div>
       </section>
 
-      {/* 3. Reassurance Footer Box */}
+      {/* 3. Reassuring Calm Helpline & Emergency Contacts (Bottom of Page) */}
       <section
-        id="peace-of-mind-box"
-        className="bg-[#FAF7F2] border-2 border-[#E7E2D8] rounded-2xl p-5 text-center"
+        id="emergency-bottom-banner"
+        className="bg-white border border-slate-200/90 rounded-3xl p-4 sm:p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-4 shadow-xs"
       >
-        <p className="text-[#78716C] font-semibold text-base sm:text-lg">
-          🌿 You are safe here. Nothing can be broken. Press any button anytime to explore.
-        </p>
+        <div className="flex items-center gap-3">
+          <div className="w-10 h-10 rounded-xl bg-rose-50 text-rose-600 flex items-center justify-center shrink-0 border border-rose-100">
+            <ShieldAlert className="w-5 h-5" />
+          </div>
+          <div>
+            <h3 className="font-bold text-sm sm:text-base text-slate-900">
+              Emergency & Helplines (Police 112 • Senior Citizens Helpline 14567)
+            </h3>
+            <p className="text-slate-500 text-xs font-medium">
+              Quick access to 112 emergency services, doctor numbers, and family contacts.
+            </p>
+          </div>
+        </div>
+
+        <button
+          onClick={() => {
+            speech.stop();
+            onNavigate("emergency");
+          }}
+          id="bottom-open-emergency-screen"
+          className="px-4 py-2 rounded-xl bg-rose-50 hover:bg-rose-100 text-rose-700 font-bold text-xs sm:text-sm border border-rose-200 transition cursor-pointer self-start sm:self-auto shrink-0 flex items-center gap-1.5"
+        >
+          <Ambulance className="w-4 h-4 text-rose-600" />
+          <span>Emergency Contacts</span>
+        </button>
       </section>
     </div>
   );

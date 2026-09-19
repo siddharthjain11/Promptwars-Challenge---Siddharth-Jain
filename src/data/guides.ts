@@ -98,6 +98,29 @@ export const INITIAL_CONTACTS: FamilyContact[] = [
 
 export const PREBUILT_GUIDES: PrebuiltGuide[] = [
   {
+    id: "whatsapp-photo",
+    title: "How to Attach and Send a Photo in WhatsApp",
+    summary: "Clear 3-step guide on sending pictures to family and grandchildren on WhatsApp.",
+    category: "phone",
+    steps: [
+      {
+        title: "Step 1: Open Your Family Chat in WhatsApp",
+        instruction:
+          "Open WhatsApp (the green icon with a phone inside a bubble). Tap the conversation with your daughter, son, or grandchild.",
+      },
+      {
+        title: "Step 2: Tap the Little Paperclip or Camera Icon",
+        instruction:
+          "Look at the bottom of the chat next to where you type. Tap the paperclip icon (📎) or camera icon (📷), then tap 'Gallery' or 'Photos'.",
+      },
+      {
+        title: "Step 3: Tap Your Picture and the Green Send Arrow",
+        instruction:
+          "Tap the photo you want to share, then tap the round green button with the white paper airplane arrow at the bottom right. That's it!",
+      },
+    ],
+  },
+  {
     id: "video-call",
     title: "How to Video Call Family (Grandchildren)",
     summary: "Simple 3-step guide to seeing and talking to your family on your phone or tablet.",

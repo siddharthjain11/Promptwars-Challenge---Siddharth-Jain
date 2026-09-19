@@ -1,105 +1,111 @@
-import React from "react";
-import { Screen } from "../types";
-import { Home, VolumeX, Type, Heart } from "lucide-react";
+import React, { useState, useEffect, useRef } from "react";
+import { Screen, AppLanguage } from "../types";
+import {
+  Settings,
+  PhoneCall,
+  VolumeX,
+} from "lucide-react";
 import { speech } from "../utils/speech";
+import { UI_TRANSLATIONS } from "../utils/translations";
 
 interface HeaderProps {
   currentScreen: Screen;
   onNavigate: (screen: Screen) => void;
-  isLargeText: boolean;
-  onToggleLargeText: () => void;
+  isLargeText?: boolean;
+  onToggleLargeText?: () => void;
   isSpeaking: boolean;
   onStopSpeaking: () => void;
+  onTriggerEmergency: () => void;
+  onOpenSettings: () => void;
+  onOpenLogin?: () => void;
+  onOpenProfile?: () => void;
+  currentLanguage: AppLanguage;
+  onSelectLanguage: (lang: AppLanguage) => void;
 }
 
 export const Header: React.FC<HeaderProps> = ({
-  currentScreen,
+  currentScreen: _currentScreen,
   onNavigate,
-  isLargeText,
-  onToggleLargeText,
   isSpeaking,
   onStopSpeaking,
+  onTriggerEmergency,
+  onOpenSettings,
+  currentLanguage,
+  onSelectLanguage: _onSelectLanguage,
 }) => {
-  return (
-    <header className="sticky top-0 z-40 bg-[#FAF7F2]/95 backdrop-blur-md border-b-2 border-[#E7E2D8] shadow-xs px-4 sm:px-8 py-3">
-      <div className="max-w-5xl mx-auto flex items-center justify-between gap-3">
-        {/* Left: App Title & Reassuring Badge */}
-        <div className="flex items-center gap-3">
-          <button
-            onClick={() => {
-              speech.stop();
-              onNavigate("home");
-            }}
-            id="brand-home-button"
-            className="flex items-center gap-3 text-left focus:outline-hidden focus:ring-4 focus:ring-amber-400 rounded-xl p-1 transition"
-          >
-            <div className="w-12 h-12 sm:w-14 sm:h-14 rounded-2xl bg-[#D97706] text-white flex items-center justify-center shadow-md">
-              <Heart className="w-7 h-7 sm:w-8 sm:h-8 fill-white" />
-            </div>
-            <div>
-              <span className="block font-bold text-xl sm:text-2xl text-[#1C1917] tracking-tight">
-                Another Partner
-              </span>
-              <span className="block text-sm sm:text-base text-[#78716C] font-medium">
-                Simple & Warm Assistant
-              </span>
-            </div>
-          </button>
-        </div>
+  const t = UI_TRANSLATIONS[currentLanguage] || UI_TRANSLATIONS.en;
 
-        {/* Right Actions: Home Button & Audio/Font Controls */}
-        <div className="flex items-center gap-2 sm:gap-3">
-          {/* Active Audio Stop Button (shows when voice is actively reading) */}
+  return (
+    <header className="sticky top-0 z-40 bg-white/95 backdrop-blur-md border-b border-slate-200 shadow-xs px-3 sm:px-6 py-2.5">
+      <div className="max-w-6xl mx-auto flex items-center justify-between gap-3">
+        {/* LEFT: Logo & App Name - Clean and direct to Home */}
+        <button
+          onClick={() => {
+            speech.stop();
+            onNavigate("home");
+          }}
+          id="brand-home-button"
+          className="flex items-center gap-2.5 text-left focus:outline-hidden focus:ring-2 focus:ring-sky-300 rounded-xl p-1 transition cursor-pointer shrink-0"
+          aria-label="Go to Home"
+        >
+          <div className="w-10 h-10 rounded-2xl bg-sky-600 text-white flex items-center justify-center shadow-xs border border-sky-500 transition shrink-0">
+            <span className="text-2xl" role="img" aria-label="Hug emoji">
+              🤗
+            </span>
+          </div>
+          <div>
+            <span className="block font-bold text-base sm:text-lg text-slate-900 tracking-tight leading-tight">
+              Another Partner
+            </span>
+            <span className="hidden sm:block text-[11px] text-slate-500 font-medium">
+              Daily Companion for Seniors
+            </span>
+          </div>
+        </button>
+
+        {/* RIGHT: Scroll-free, streamlined controls: Stop Voice (if active), Emergency (Red Icon Only), Settings (Icon Only) */}
+        <div className="flex items-center gap-2 shrink-0">
+          {/* Active Speaking Indicator with quick stop */}
           {isSpeaking && (
             <button
               onClick={onStopSpeaking}
               id="stop-audio-button"
-              className="flex items-center gap-2 px-3 sm:px-4 py-2.5 rounded-xl bg-rose-100 hover:bg-rose-200 text-rose-900 border-2 border-rose-300 font-bold text-base sm:text-lg animate-pulse shadow-sm focus:outline-hidden focus:ring-4 focus:ring-rose-400"
-              title="Stop reading aloud"
+              className="h-11 px-3 inline-flex items-center justify-center gap-1.5 rounded-2xl bg-rose-50 hover:bg-rose-100 text-rose-800 border border-rose-300 font-bold text-xs animate-pulse cursor-pointer shrink-0 transition"
+              title={t.stopVoice || "Stop Voice"}
+              aria-label="Stop Voice"
             >
-              <VolumeX className="w-5 h-5 sm:w-6 sm:h-6 text-rose-700" />
-              <span className="hidden sm:inline">Stop Voice</span>
+              <VolumeX className="w-5 h-5 text-rose-600" />
+              <span className="hidden sm:inline font-bold">Stop Voice</span>
             </button>
           )}
 
-          {/* Text Size Accessibility Toggle */}
+          {/* Emergency Icon Only in RED */}
           <button
-            onClick={onToggleLargeText}
-            id="toggle-text-size-button"
-            className={`flex items-center gap-1.5 px-3 sm:px-4 py-2.5 rounded-xl border-2 font-bold text-base sm:text-lg transition focus:outline-hidden focus:ring-4 focus:ring-amber-400 ${
-              isLargeText
-                ? "bg-amber-100 text-amber-950 border-amber-400"
-                : "bg-white text-[#292524] border-[#D6D0C4] hover:bg-[#F5F0E6]"
-            }`}
-            title="Toggle extra large text"
+            onClick={() => {
+              speech.stop();
+              onTriggerEmergency();
+            }}
+            id="header-emergency-red-icon-button"
+            className="w-11 h-11 inline-flex items-center justify-center rounded-2xl bg-red-600 hover:bg-red-700 text-white shadow-md transition active:scale-95 cursor-pointer ring-2 ring-red-200 shrink-0"
+            title="Emergency Alert (Calls & Notifies Family)"
+            aria-label="Emergency"
           >
-            <Type className="w-5 h-5" />
-            <span className="hidden md:inline">
-              {isLargeText ? "Text: Extra Large" : "Text: Standard"}
-            </span>
-            <span className="md:hidden">{isLargeText ? "A+" : "A"}</span>
+            <PhoneCall className="w-5 h-5 text-white animate-bounce" />
           </button>
 
-          {/* CLEARLY VISIBLE "HOME" BUTTON ON EVERY SCREEN */}
-          {currentScreen !== "home" ? (
-            <button
-              onClick={() => {
-                speech.stop();
-                speech.playChime("gentle");
-                onNavigate("home");
-              }}
-              id="global-home-nav-button"
-              className="flex items-center gap-2 px-4 sm:px-6 py-2.5 sm:py-3 rounded-xl bg-[#292524] hover:bg-[#1C1917] text-white font-bold text-base sm:text-xl shadow-md transition transform active:scale-95 focus:outline-hidden focus:ring-4 focus:ring-amber-400"
-            >
-              <Home className="w-5 h-5 sm:w-6 sm:h-6 text-amber-300" />
-              <span>Go Home</span>
-            </button>
-          ) : (
-            <div className="hidden sm:flex items-center gap-2 px-3 py-2 rounded-xl bg-amber-50 border border-amber-200 text-amber-900 text-sm font-semibold">
-              <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse"></span>
-              Home Screen
-            </div>
-          )}
+          {/* Settings Icon Only */}
+          <button
+            onClick={() => {
+              speech.stop();
+              onOpenSettings();
+            }}
+            id="header-settings-icon-button"
+            className="w-11 h-11 inline-flex items-center justify-center rounded-2xl bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-300 shadow-2xs transition active:scale-95 cursor-pointer shrink-0"
+            title={t.settings || "Settings, Language & Audio Guide"}
+            aria-label="Settings"
+          >
+            <Settings className="w-5 h-5 text-slate-700" />
+          </button>
         </div>
       </div>
     </header>

@@ -308,7 +308,7 @@ export const RemindersScreen: React.FC<RemindersScreenProps> = ({
   return (
     <div className="max-w-4xl mx-auto px-4 sm:px-6 py-6 space-y-6">
       {/* Top Bar with Go to Home */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white p-4 sm:p-6 rounded-3xl border-2 border-[#E7E2D8] shadow-xs">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white p-4 sm:p-6 rounded-3xl border-2 border-sky-200 shadow-xs">
         <div className="flex items-center gap-3">
           <button
             onClick={() => {
@@ -316,20 +316,25 @@ export const RemindersScreen: React.FC<RemindersScreenProps> = ({
               onBackToHome();
             }}
             id="reminders-back-to-home"
-            className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-[#FAF7F2] hover:bg-[#EFEAE1] text-[#292524] font-bold text-base sm:text-lg border border-[#D6D0C4] transition focus:outline-hidden focus:ring-4 focus:ring-amber-400"
+            className="flex items-center gap-2 px-4 py-2.5 rounded-2xl bg-sky-50 hover:bg-sky-100 text-sky-950 font-bold text-base sm:text-lg border-2 border-sky-200 transition focus:outline-hidden focus:ring-4 focus:ring-sky-300 cursor-pointer"
           >
-            <ArrowLeft className="w-5 h-5" />
+            <ArrowLeft className="w-5 h-5 text-sky-700" />
             <span>Go to Home</span>
           </button>
           <div>
-            <h1
-              className={`font-serif font-bold text-[#1C1917] ${
-                isLargeText ? "text-2xl sm:text-3xl" : "text-xl sm:text-2xl"
-              }`}
-            >
-              My Daily Reminders
-            </h1>
-            <p className="text-[#78716C] font-medium text-sm sm:text-base">
+            <div className="flex items-center gap-2">
+              <span className="text-2xl" role="img" aria-label="Hug">
+                🤗
+              </span>
+              <h1
+                className={`font-serif font-bold text-slate-900 ${
+                  isLargeText ? "text-2xl sm:text-3xl" : "text-xl sm:text-2xl"
+                }`}
+              >
+                My Daily Reminders
+              </h1>
+            </div>
+            <p className="text-slate-600 font-medium text-sm sm:text-base">
               {completedCount} of {reminders.length} completed today
             </p>
           </div>
@@ -339,7 +344,7 @@ export const RemindersScreen: React.FC<RemindersScreenProps> = ({
         <button
           onClick={handleOpenAddNew}
           id="toggle-custom-reminder-button"
-          className="flex items-center justify-center gap-2 px-6 py-3.5 rounded-2xl bg-[#D97706] hover:bg-[#B45309] text-white font-bold text-base sm:text-lg shadow-sm transition active:scale-95 focus:outline-hidden focus:ring-4 focus:ring-amber-400 cursor-pointer"
+          className="flex items-center justify-center gap-2 px-6 py-3.5 rounded-2xl bg-sky-600 hover:bg-sky-700 text-white font-bold text-base sm:text-lg shadow-sm transition active:scale-95 focus:outline-hidden focus:ring-4 focus:ring-sky-300 cursor-pointer"
         >
           <Plus className="w-6 h-6 stroke-[2.5]" />
           <span>Add New Reminder</span>
@@ -349,18 +354,18 @@ export const RemindersScreen: React.FC<RemindersScreenProps> = ({
       {/* COMMON PRESETS SECTION */}
       <section
         aria-labelledby="common-reminders-heading"
-        className="bg-white p-5 sm:p-6 rounded-3xl border-2 border-[#E7E2D8] space-y-4 shadow-xs"
+        className="bg-white p-5 sm:p-6 rounded-3xl border-2 border-sky-200 space-y-4 shadow-xs"
       >
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1 border-b border-[#F0EBE1] pb-3">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1 border-b border-sky-100 pb-3">
           <div>
             <h2
               id="common-reminders-heading"
-              className="font-bold text-lg sm:text-xl text-[#1C1917] flex items-center gap-2"
+              className="font-bold text-lg sm:text-xl text-slate-900 flex items-center gap-2"
             >
-              <Sparkles className="w-5 h-5 text-amber-600" />
+              <Sparkles className="w-5 h-5 text-sky-600" />
               <span>Common Daily Reminders</span>
             </h2>
-            <p className="text-[#78716C] font-medium text-sm sm:text-base">
+            <p className="text-slate-600 font-medium text-sm sm:text-base">
               Tap any card to add and edit medicine names, walking time, or workout details.
             </p>
           </div>

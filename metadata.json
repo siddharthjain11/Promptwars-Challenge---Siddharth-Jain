@@ -2,7 +2,8 @@
   "name": "Another Partner",
   "description": "An AI-powered daily companion website for senior citizens with large text, spoken reading, daily reminders, and reassuring step-by-step guidance.",
   "requestFramePermissions": [
-    "microphone"
+    "microphone",
+    "geolocation"
   ],
   "majorCapabilities": [
     "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
