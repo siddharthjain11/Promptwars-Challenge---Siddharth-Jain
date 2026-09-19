@@ -38,7 +38,7 @@ export const Header: React.FC<HeaderProps> = ({
             </div>
             <div>
               <span className="block font-bold text-xl sm:text-2xl text-[#1C1917] tracking-tight">
-                Daily Companion
+                Evergreen Partner
               </span>
               <span className="block text-sm sm:text-base text-[#78716C] font-medium">
                 Simple & Warm Assistant
