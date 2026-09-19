@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from "react";
-import { Screen, AppLanguage } from "../types";
+import { Screen, AppLanguage, UserProfile } from "../types";
 import {
   Settings,
   PhoneCall,
@@ -19,6 +19,9 @@ interface HeaderProps {
   onOpenSettings: () => void;
   onOpenLogin?: () => void;
   onOpenProfile?: () => void;
+  user?: UserProfile;
+  isAudioDescEnabled?: boolean;
+  onToggleAudioDesc?: () => void;
   currentLanguage: AppLanguage;
   onSelectLanguage: (lang: AppLanguage) => void;
 }

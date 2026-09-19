@@ -16,7 +16,6 @@ import {
   MapPin,
   Phone,
   Navigation,
-  ExternalLink,
   Volume2,
   VolumeX,
   Compass,
@@ -27,6 +26,8 @@ import {
 } from "lucide-react";
 import { speech } from "../utils/speech";
 import { AppLanguage } from "../types";
+
+declare const google: any;
 
 const GOOGLE_MAPS_API_KEY =
   (import.meta.env.VITE_GOOGLE_MAPS_API_KEY as string) ||
@@ -84,17 +85,17 @@ const PlacesSearchController: React.FC<ControllerProps> = ({
       // Create PlacesService using the map instance
       const service = new placesLib.PlacesService(map);
 
-      const request: google.maps.places.PlaceSearchRequest = {
+      const request: any = {
         location: new google.maps.LatLng(center.lat, center.lng),
         radius: 6000, // 6km search radius
         type: category === "hospital" ? "hospital" : "pharmacy",
         keyword: keyword.trim() ? keyword.trim() : (category === "hospital" ? "hospital clinic" : "pharmacy medical store chemist"),
       };
 
-      service.nearbySearch(request, (results, status) => {
+      service.nearbySearch(request, (results: any, status: any) => {
         onSearchingChange(false);
         if (status === placesLib.PlacesServiceStatus.OK && results && results.length > 0) {
-          const mapped: PlaceItem[] = results.slice(0, 15).map((r, idx) => {
+          const mapped: PlaceItem[] = results.slice(0, 15).map((r: any, idx: number) => {
             const loc = r.geometry?.location;
             return {
               id: r.place_id || `place_${idx}`,
@@ -219,12 +220,21 @@ export const NearbyScreen: React.FC<NearbyScreenProps> = ({
 }) => {
   const [activeCategory, setActiveCategory] = useState<"hospital" | "pharmacy">("hospital");
   const [searchQuery, setSearchQuery] = useState<string>("");
+  const [debouncedSearchQuery, setDebouncedSearchQuery] = useState<string>("");
   const [userLocation, setUserLocation] = useState<{ lat: number; lng: number }>(DEFAULT_CENTER);
   const [locationStatus, setLocationStatus] = useState<"locating" | "found" | "denied">("locating");
   const [places, setPlaces] = useState<PlaceItem[]>([]);
   const [selectedPlace, setSelectedPlace] = useState<PlaceItem | null>(null);
   const [isSearching, setIsSearching] = useState<boolean>(false);
   const [isSpeaking, setIsSpeaking] = useState<boolean>(false);
+
+  // Debounce search query to prevent excessive API calls on every keystroke
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedSearchQuery(searchQuery);
+    }, 400);
+    return () => clearTimeout(timer);
+  }, [searchQuery]);
 
   // Obtain geolocation upon mounting
   useEffect(() => {
@@ -452,7 +462,7 @@ export const NearbyScreen: React.FC<NearbyScreenProps> = ({
                 <PlacesSearchController
                   center={userLocation}
                   category={activeCategory}
-                  keyword={searchQuery}
+                  keyword={debouncedSearchQuery}
                   onPlacesFound={setPlaces}
                   onSearchingChange={setIsSearching}
                   selectedPlace={selectedPlace}

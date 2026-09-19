@@ -3,6 +3,7 @@ import path from "path";
 import { createServer as createViteServer } from "vite";
 import { GoogleGenAI } from "@google/genai";
 import dotenv from "dotenv";
+import { sanitizeInput } from "./src/utils/sanitize";
 
 dotenv.config();
 
@@ -92,10 +93,19 @@ app.get("/api/health", (_req, res) => {
 // 2. Chat with Companion
 app.post("/api/companion/chat", async (req, res) => {
   try {
-    const { message, history } = req.body;
-    if (!message || typeof message !== "string") {
-      return res.status(400).json({ error: "Message is required" });
+    const rawMessage = req.body?.message;
+    const message = sanitizeInput(rawMessage, { maxLength: 1000 });
+    if (!message) {
+      return res.status(400).json({ error: "A valid message is required." });
     }
+
+    const rawHistory = req.body?.history;
+    const safeHistory = Array.isArray(rawHistory)
+      ? rawHistory.slice(-6).map((h: any) => ({
+          sender: sanitizeInput(h?.sender, { maxLength: 50, allowNewlines: false }) || "User",
+          text: sanitizeInput(h?.text, { maxLength: 500 }),
+        }))
+      : [];
 
     const ai = getAi();
     if (!ai) {
@@ -112,11 +122,8 @@ User message: "${message}"
 
 Recent conversation history:
 ${
-  Array.isArray(history)
-    ? history
-        .slice(-4)
-        .map((h: { sender: string; text: string }) => `${h.sender}: ${h.text}`)
-        .join("\n")
+  safeHistory.length > 0
+    ? safeHistory.map((h) => `${h.sender}: ${h.text}`).join("\n")
     : "None"
 }
 
@@ -148,8 +155,10 @@ CRITICAL RULES:
 // 3. Simplify & Analyze Document ("Read this for me" with OCR & Classification)
 app.post("/api/companion/simplify", async (req, res) => {
   try {
-    const { text, imageBase64, mimeType } = req.body;
-    if ((!text || typeof text !== "string") && !imageBase64) {
+    const rawText = req.body?.text;
+    const text = sanitizeInput(rawText, { maxLength: 8000 });
+    const { imageBase64, mimeType } = req.body || {};
+    if (!text && !imageBase64) {
       return res.status(400).json({ error: "Text or image is required" });
     }
 
@@ -281,8 +290,9 @@ Format output strictly as valid JSON matching this schema:
 // 4. Step-by-Step Task Guide
 app.post("/api/companion/guide", async (req, res) => {
   try {
-    const { task } = req.body;
-    if (!task || typeof task !== "string") {
+    const rawTask = req.body?.task;
+    const task = sanitizeInput(rawTask, { maxLength: 500 });
+    if (!task) {
       return res.status(400).json({ error: "Task description is required" });
     }
 
@@ -351,9 +361,9 @@ Example format:
 
 // 5. Proactive greeting & time-of-day suggestion
 app.post("/api/companion/greeting", async (req, res) => {
-  const { hour, userName } = req.body;
-  const name = userName || "friend";
-  const currentHour = typeof hour === "number" ? hour : new Date().getHours();
+  const { hour, userName } = req.body || {};
+  const name = sanitizeInput(userName, { maxLength: 60, allowNewlines: false }) || "friend";
+  const currentHour = typeof hour === "number" && hour >= 0 && hour <= 23 ? hour : new Date().getHours();
   const timePeriod = currentHour < 12 ? "morning" : currentHour < 17 ? "afternoon" : "evening";
 
   const getDefaultSuggestion = () => {
@@ -407,7 +417,10 @@ Output JSON:
 // 6. Scam / Fraud Message & Screenshot Checker
 app.post("/api/scam-checker", async (req, res) => {
   try {
-    const { text, image } = req.body;
+    const rawText = req.body?.text;
+    const text = sanitizeInput(rawText, { maxLength: 5000 });
+    const image = typeof req.body?.image === "string" ? req.body.image : undefined;
+
     if (!text && !image) {
       return res
         .status(400)
@@ -556,16 +569,23 @@ Respond strictly in JSON:
 
 // 7. Emergency Alert / Missed Call Dispatch Simulation
 app.post("/api/emergency/alert", async (req, res) => {
-  const { contacts, message } = req.body;
-  const contactList = Array.isArray(contacts) && contacts.length > 0
-    ? contacts
+  const { contacts, message } = req.body || {};
+  const rawList = Array.isArray(contacts) && contacts.length > 0 ? contacts : null;
+  const contactList = rawList
+    ? rawList.slice(0, 10).map((c: any) => ({
+        name: sanitizeInput(c?.name, { maxLength: 60, allowNewlines: false }) || "Family Contact",
+        phone: sanitizeInput(c?.phone, { maxLength: 30, allowNewlines: false }) || "112",
+      }))
     : [{ name: "Family Emergency Contacts", phone: "112" }];
+
+  const safeMessage = sanitizeInput(message, { maxLength: 300 }) || "Emergency Alert Sent";
 
   return res.json({
     success: true,
-    dispatchedTo: contactList.map((c: any) => ({
-      name: c.name || "Family Contact",
-      phone: c.phone || "Emergency",
+    alertMessage: safeMessage,
+    dispatchedTo: contactList.map((c) => ({
+      name: c.name,
+      phone: c.phone,
       status: "missed_call_alert_sent",
       timestamp: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
     })),
@@ -577,14 +597,21 @@ app.post("/api/emergency/alert", async (req, res) => {
 // 8. Endless Real-World Quiz Generation via Gemini
 app.post("/api/quiz/generate", async (req, res) => {
   try {
-    const { topic, language = "en", count = 3, previousQuestions = [] } = req.body;
+    const { topic, language = "en", count = 3, previousQuestions = [] } = req.body || {};
     const ai = getAi();
 
-    const selectedTopic = topic || "Real-World Curiosities & Nostalgia";
+    const selectedTopic =
+      sanitizeInput(topic, { maxLength: 100, allowNewlines: false }) ||
+      "Real-World Curiosities & Nostalgia";
+
+    const allowedLangs = ["en", "hi", "hinglish"];
+    const targetLanguage = allowedLangs.includes(language) ? language : "en";
+    const questionCount = Math.min(Math.max(Number(count) || 3, 1), 5);
+
     const langPrompt =
-      language === "hi"
+      targetLanguage === "hi"
         ? "Language MUST be शुद्ध एवं सरल हिंदी (Hindi in Devanagari script)."
-        : language === "hinglish"
+        : targetLanguage === "hinglish"
         ? "Language MUST be Hinglish (conversational Hindi written in Roman English alphabet, e.g. 'Sholay film mein Gabbar Singh ka mashhoor dialogue kya tha?')."
         : "Language MUST be clear, accessible English.";
 
@@ -593,66 +620,66 @@ app.post("/api/quiz/generate", async (req, res) => {
       const fallbackQuestions = [
         {
           question:
-            language === "hi"
+            targetLanguage === "hi"
               ? "विश्व प्रसिद्ध ताजमहल किस भारतीय नदी के किनारे स्थित है?"
-              : language === "hinglish"
+              : targetLanguage === "hinglish"
               ? "World famous Taj Mahal kis Indian nadi ke kinare sthit hai?"
               : "On the banks of which famous river is the Taj Mahal located in Agra?",
           options:
-            language === "hi"
+            targetLanguage === "hi"
               ? ["यमुना नदी", "गंगा नदी", "नर्मदा नदी"]
-              : language === "hinglish"
+              : targetLanguage === "hinglish"
               ? ["Yamuna Nadi", "Ganga Nadi", "Narmada Nadi"]
               : ["Yamuna River", "Ganges River", "Narmada River"],
           correct: 0,
           fact:
-            language === "hi"
+            targetLanguage === "hi"
               ? "ताजमहल 17वीं सदी में मुगल सम्राट शाहजहाँ द्वारा यमुना नदी के शांत तट पर बनवाया गया था।"
-              : language === "hinglish"
+              : targetLanguage === "hinglish"
               ? "Taj Mahal 17th century mein Yamuna nadi ke kinare Shah Jahan ne banwaya tha."
               : "The Taj Mahal was commissioned in 1631 by Mughal Emperor Shah Jahan along the banks of the Yamuna.",
           category: "Geography & Wonders",
         },
         {
           question:
-            language === "hi"
+            targetLanguage === "hi"
               ? "मशहूर हिंदी फिल्म 'शोले' में ठाकुर का किरदार किस दिग्गज अभिनेता ने निभाया था?"
-              : language === "hinglish"
+              : targetLanguage === "hinglish"
               ? "Mashhoor Bollywood film 'Sholay' mein Thakur ka role kis legend actor ne nibhaya tha?"
               : "Which legendary actor played the iconic role of Thakur in the classic Indian film 'Sholay'?",
           options:
-            language === "hi"
+            targetLanguage === "hi"
               ? ["संजीव कुमार", "अमरीश पुरी", "दिलीप कुमार"]
-              : language === "hinglish"
+              : targetLanguage === "hinglish"
               ? ["Sanjeev Kumar", "Amrish Puri", "Dilip Kumar"]
               : ["Sanjeev Kumar", "Amrish Puri", "Dilip Kumar"],
           correct: 0,
           fact:
-            language === "hi"
+            targetLanguage === "hi"
               ? "संजीव कुमार जी ने ठाकुर बलदेव सिंह का अविस्मरणीय किरदार निभाया था।"
-              : language === "hinglish"
+              : targetLanguage === "hinglish"
               ? "Sanjeev Kumar ji ne Thakur Baldev Singh ka memorable role play kiya tha."
               : "Sanjeev Kumar delivered an unforgettable performance as Thakur Baldev Singh in the 1975 masterpiece.",
           category: "Classic Cinema",
         },
         {
           question:
-            language === "hi"
+            targetLanguage === "hi"
               ? "कौन सा सुंदर पक्षी बारिश आने से पहले अपने सुंदर पंख फैलाकर नाचता है?"
-              : language === "hinglish"
+              : targetLanguage === "hinglish"
               ? "Kaunsa sundar pakshi barish aane se pehle apne pankh failakar naachta hai?"
               : "Which magnificent bird is renowned for fanning its iridescent feathers and dancing before rain?",
           options:
-            language === "hi"
+            targetLanguage === "hi"
               ? ["मोर (Peacock)", "हंस", "कोयल"]
-              : language === "hinglish"
+              : targetLanguage === "hinglish"
               ? ["Mor (Peacock)", "Hans (Swan)", "Koyal (Cuckoo)"]
               : ["Peacock (Mor)", "Swan", "Nightingale"],
           correct: 0,
           fact:
-            language === "hi"
+            targetLanguage === "hi"
               ? "मोर भारत का राष्ट्रीय पक्षी है और बादलों की गर्जना सुनकर खुशी से अपने पंख फैलाता है।"
-              : language === "hinglish"
+              : targetLanguage === "hinglish"
               ? "Peacock India ka national bird hai jo badal dekhkar khushi se pankh failata hai."
               : "Peacocks display their spectacular train of feathers during courtship and monsoon seasons.",
           category: "Nature & Wildlife",
@@ -662,11 +689,15 @@ app.post("/api/quiz/generate", async (req, res) => {
     }
 
     const previousList = Array.isArray(previousQuestions)
-      ? previousQuestions.slice(-10).join("; ")
+      ? previousQuestions
+          .slice(-10)
+          .map((q) => sanitizeInput(q, { maxLength: 100, allowNewlines: false }))
+          .filter(Boolean)
+          .join("; ")
       : "";
 
     const prompt = `You are an expert trivia curator for seniors (elderly persons aged 60+).
-Generate ${count} engaging, culturally rich, interesting real-world trivia questions on the theme: "${selectedTopic}".
+Generate ${questionCount} engaging, culturally rich, interesting real-world trivia questions on the theme: "${selectedTopic}".
 
 ${langPrompt}
 
@@ -707,11 +738,13 @@ Return strictly valid JSON:
       // Clean and validate
       const validQuestions = questions.map((q: any, idx: number) => ({
         id: `ai-quiz-${Date.now()}-${idx}`,
-        question: q.question,
-        options: Array.isArray(q.options) && q.options.length === 3 ? q.options : ["A", "B", "C"],
+        question: sanitizeInput(q.question, { maxLength: 200, allowNewlines: false }),
+        options: Array.isArray(q.options) && q.options.length === 3
+          ? q.options.map((opt: any) => sanitizeInput(opt, { maxLength: 80, allowNewlines: false }))
+          : ["Option A", "Option B", "Option C"],
         correct: typeof q.correct === "number" && q.correct >= 0 && q.correct <= 2 ? q.correct : 0,
-        fact: q.fact || "Real world knowledge keeps our minds joyful and active!",
-        category: q.category || selectedTopic,
+        fact: sanitizeInput(q.fact, { maxLength: 300 }) || "Real world knowledge keeps our minds joyful and active!",
+        category: sanitizeInput(q.category, { maxLength: 60, allowNewlines: false }) || selectedTopic,
         isAiGenerated: true,
       }));
 
@@ -723,6 +756,14 @@ Return strictly valid JSON:
   } catch (err: any) {
     console.warn("Quiz generation error:", err?.message || err);
     return res.status(500).json({ error: "Failed to generate quiz questions", questions: [] });
+  }
+});
+
+// Global API error handler — ensures no stack traces or raw errors leak to client
+app.use((err: any, _req: express.Request, res: express.Response, _next: express.NextFunction) => {
+  console.error("[Unhandled API Error]:", err?.message || err);
+  if (!res.headersSent) {
+    res.status(500).json({ error: "An unexpected error occurred. Please try again later." });
   }
 });
 

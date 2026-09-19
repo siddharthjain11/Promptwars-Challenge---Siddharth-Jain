@@ -8,8 +8,6 @@ import {
   Type,
   Check,
   User,
-  HeartHandshake,
-  MapPin,
   ChevronRight,
   Headphones,
   Globe,

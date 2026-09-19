@@ -17,6 +17,7 @@ import {
   HeartHandshake,
 } from "lucide-react";
 import { speech } from "../utils/speech";
+import { sanitizeInput } from "../utils/sanitize";
 
 interface HelpAndEmergencyScreenProps {
   onBackToHome: () => void;
@@ -102,7 +103,7 @@ export const HelpAndEmergencyScreen: React.FC<HelpAndEmergencyScreenProps> = ({
 
   const handleAskCustomTask = async (e: React.FormEvent) => {
     e.preventDefault();
-    const query = customTaskQuery.trim();
+    const query = sanitizeInput(customTaskQuery, { maxLength: 500 });
     if (!query || isLoadingCustomGuide) return;
 
     speech.stop();

@@ -11,6 +11,7 @@ import {
   RotateCcw,
 } from "lucide-react";
 import { speech } from "../utils/speech";
+import { sanitizeInput } from "../utils/sanitize";
 
 interface CompanionScreenProps {
   onBackToHome: () => void;
@@ -139,7 +140,8 @@ export const CompanionScreen: React.FC<CompanionScreenProps> = ({
   };
 
   const handleSendMessage = async (textToSend?: string) => {
-    const query = (textToSend || inputMessage).trim();
+    const rawQuery = textToSend || inputMessage;
+    const query = sanitizeInput(rawQuery, { maxLength: 1000 });
     if (!query || isLoading) return;
 
     speech.stop();

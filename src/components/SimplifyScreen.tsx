@@ -13,14 +13,12 @@ import {
   PlusCircle,
   Pill,
   Receipt,
-  FileSpreadsheet,
   Check,
-  Calendar,
   DollarSign,
-  Phone,
   BookmarkCheck,
 } from "lucide-react";
 import { speech } from "../utils/speech";
+import { sanitizeInput } from "../utils/sanitize";
 import { AppLanguage, Reminder } from "../types";
 
 interface MedicineItem {
@@ -139,7 +137,9 @@ export const SimplifyScreen: React.FC<SimplifyScreenProps> = ({
 
     try {
       const payload: any = {};
-      if (textToSend) payload.text = textToSend;
+      if (textToSend) {
+        payload.text = sanitizeInput(textToSend, { maxLength: 8000 });
+      }
       if (imageToSend) {
         payload.imageBase64 = imageToSend;
         payload.mimeType = options?.mimeType || "image/jpeg";

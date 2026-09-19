@@ -127,6 +127,12 @@ export const SCREEN_AUDIO_DESCRIPTIONS: Record<
         "आप डिजिटल सहायता स्क्रीन पर हैं। व्हाट्सएप पर फोटो भेजने और वीडियो कॉल करने के सरल चरण यहाँ बताए गए हैं।",
       summary: "मोबाइल फोन इस्तेमाल करने की आसान गाइड।",
     },
+    nearby: {
+      title: "नज़दीकी अस्पताल और दवा की दुकानें",
+      speechText:
+        "आप नज़दीकी अस्पताल और दवाई की दुकान स्क्रीन पर हैं। यहाँ आप गूगल मैप्स की सहायता से अपने पास के क्लिनिक, इमरजेंसी अस्पताल और मेडिकल स्टोर खोज सकते हैं और सीधे कॉल कर सकते हैं।",
+      summary: "गूगल मैप्स से नज़दीकी अस्पताल और मेडिकल स्टोर खोजें।",
+    },
   },
   hinglish: {
     home: {
@@ -182,6 +188,12 @@ export const SCREEN_AUDIO_DESCRIPTIONS: Record<
       speechText:
         "Aap Digital Guides screen par hain. WhatsApp, video call, aur photo bhejne ke easy steps yahan hain.",
       summary: "Phone apps chalane ki easy guides.",
+    },
+    nearby: {
+      title: "Nearby Hospitals aur Medical Stores",
+      speechText:
+        "Aap Nearby Hospitals aur Medical Stores screen par hain. Yahan Google Maps ki madad se pass ke clinics, emergency hospitals aur medical stores search karke direct call kar sakte hain.",
+      summary: "Google Maps se nearby hospitals aur pharmacies search karein.",
     },
   },
 };

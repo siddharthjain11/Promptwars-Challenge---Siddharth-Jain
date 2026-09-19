@@ -18,7 +18,6 @@ import {
   Activity,
   Phone,
   Droplets,
-  HeartPulse,
   X,
   Sparkles,
   Edit3,

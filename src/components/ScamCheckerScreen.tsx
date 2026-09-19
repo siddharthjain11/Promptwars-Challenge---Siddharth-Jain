@@ -9,13 +9,13 @@ import {
   VolumeX,
   Sparkles,
   RotateCcw,
-  CheckCircle2,
   X,
   HelpCircle,
   FileText,
 } from "lucide-react";
 import { ScamAnalysisResult } from "../types";
 import { speech } from "../utils/speech";
+import { sanitizeInput } from "../utils/sanitize";
 
 interface ScamCheckerScreenProps {
   onBackToHome: () => void;
@@ -94,7 +94,8 @@ export const ScamCheckerScreen: React.FC<ScamCheckerScreenProps> = ({
   };
 
   const handleCheckScam = async (textToCheck = inputText, imgToCheck = screenshotData) => {
-    if (!textToCheck.trim() && !imgToCheck) return;
+    const cleanText = sanitizeInput(textToCheck, { maxLength: 5000 });
+    if (!cleanText && !imgToCheck) return;
 
     setIsLoading(true);
     setAnalysis(null);
@@ -107,7 +108,7 @@ export const ScamCheckerScreen: React.FC<ScamCheckerScreenProps> = ({
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          text: textToCheck,
+          text: cleanText,
           image: imgToCheck,
         }),
       });
