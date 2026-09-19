@@ -159,7 +159,7 @@ export default function App() {
       <footer className="bg-[#FAF7F2] border-t-2 border-[#E7E2D8] py-6 px-4 text-center">
         <div className="max-w-4xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-4">
           <p className="text-[#78716C] font-semibold text-base sm:text-lg">
-            Evergreen Partner • Made with care for your peace of mind
+            Another Partner • Made with care for your peace of mind
           </p>
 
           {currentScreen !== "home" && (
